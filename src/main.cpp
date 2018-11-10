@@ -6,7 +6,6 @@
  * Historical reference Google Drive\Projects\GreensGrower\V4\Electronics\Software\Arduino\GreensGrower4.8
  * 10/9/18 Removed lots of comments and unrelated code from V6
  * 10/12/18 V7 working with protoboard tests
- testing 123
  */
 
 /****************************
