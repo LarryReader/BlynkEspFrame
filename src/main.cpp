@@ -94,7 +94,7 @@ BlynkTimer timer;
 #include "auth.h"
 
 // Auth Token
-char auth[] = "ad948bfe5868470a9dffde4c3c747332"; // BLYNK APP - MinimalPlanter
+//char auth[] = "ad948bfe5868470a9dffde4c3c747332"; // BLYNK APP - MinimalPlanter
 
 // WiFi credentials.
 // Set password to "" for open networks.
