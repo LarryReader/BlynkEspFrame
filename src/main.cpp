@@ -8,17 +8,13 @@
  * 10/12/18 V7 working with protoboard tests
  */
 
-/****************************
- * * FEATURES ***************
- * **************************
+/* FEATURES *****************
  * Water Level notification / pump stop
  * Pump stop on watered sensor
  * Pump cycle timing
- * 
  */
-/**************************** 
- * * TODO *******************
- * **************************
+
+/* TODO *******************
 Pump stop on water low
 Pump stop on watered sensor
 Watered sensor power on for watering cycle
@@ -61,10 +57,9 @@ V2 jumper for battery powered mode
 /* Comment this out to disable prints and save space */
 #define BLYNK_PRINT Serial
 
-/* ********************************
- * * LIBRARIES ********************
- * ********************************
- */
+
+/* * LIBRARIES ********************
+*/
 
 // Platform
 #include <Arduino.h>
@@ -78,45 +73,18 @@ V2 jumper for battery powered mode
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 
-/* *********************************
- * * INITIALIZATIONS ***************
- * *********************************
- */
+
+/* INITIALIZATIONS ****************/
 
 // Timer object
 BlynkTimer timer;
 
 
-/* ***********************************
- * * AUTHORIZATIONS *******************
- * ***********************************
- */
 
+/* AUTHORIZATIONS ********************/
 #include "auth.h"
 
-// Auth Token
-//char auth[] = "ad948bfe5868470a9dffde4c3c747332"; // BLYNK APP - MinimalPlanter
-
-// WiFi credentials.
-// Set password to "" for open networks.
-
-// char ssid[] = "MySpectrumWiFi7c-2G";
-// char pass[] = "chillyrabbit361";
-
-//char ssid[] = "Fat_Cat_Fablab"; 
-//char pass[] = "m4k3rb0t";
-
-//char ssid[] = "LRPixel";
-//char pass[] = "LRPixel222";
-
-//char ssid[] = "D1B436";
-//char pass[] = "55539777";
-
-/* 
- * **********************************
- * * GLOBAL VARS ********************
- * **********************************
- */
+/* GLOBAL VARS *********************/
 
 //Timing when offline !!Can still use the Blynk Timer when offline??
 int lastConnectionAttempt = millis();
@@ -160,12 +128,7 @@ const int ledPin = 0; // D3 Hardware LED
  *  V12 - Pump
  */
 
-
-/* 
- * **************************************************
- * * FUNCTIONS **************************************
- * **************************************************
- */
+// FUNCTIONS **************************************
 
 /* 
  *  For Minimal Planter
