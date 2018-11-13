@@ -1,5 +1,6 @@
 /*
  * Board NodeMCU 1.0 ESP-12E
+ * 11/13/18 Installed PlatformIO on Surface
  * 11/9/18 Added to Git repository BlynkEspFrame
  * Ported from Arduino IDE MinimalPlanterV8-8266.ino To PlatformIO 11/9/18
  * Use with BLYNK App MinimalPlanter - ad948bfe5868470a9dffde4c3c747332
