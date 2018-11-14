@@ -54,14 +54,14 @@ V2 jumper for battery powered mode
  *  
  */
 
-/* 
+/* * Fundamental Blynk communications
  * Blynk App > Device - Blynk Example - Get Data 
  * BLYNK_WRITE(V1){ //Called every time Widget on V1 in Blynk app writes values to V1
  *  int pinValue = param.asInt(); // assigning incoming value from Interface pin V1 to a variable
  *  }
  *  
  * Device > Blynk App - Blynk Example - Push Data
- *  Blynk.virtualWrite(V7, value); //Trigger for Eventor Notifications
+ *  Blynk.virtualWrite(V7, value); //Set V7 for Eventor to watch for notifications
  *  
  * Blynk App Request < From Device - Blynk Example - Push Data On Request
  * BLYNK_READ(V8){
@@ -69,15 +69,15 @@ V2 jumper for battery powered mode
  *{
  */
 
-/* Comment this out to disable prints and save space */
+/* Comment this out to disable prints and save space
+    I think this wants to be the first line in the code ?
+ */
 #define BLYNK_PRINT Serial
 
 /* AUTHORIZATIONS ********************/
 #include "auth.h"
 
-/* GLOBAL VARS **********************/
-
-// Libraries
+// Libraries  ***********************
 
 // Platform ***
 #include <Arduino.h>
@@ -93,7 +93,7 @@ V2 jumper for battery powered mode
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 
-// Objects
+// Objects and Global vars
 
 // Timer 
 BlynkTimer timer;
@@ -109,7 +109,7 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
-// Attach virtual serial terminal to Virtual Pin V0
+//Blynk Widgets
 WidgetTerminal terminal(V0);
 
 WidgetLED led1(V1);
@@ -121,14 +121,12 @@ bool ledStatus = false;
 #define BLYNK_RED       "#D3435C"
 #define BLYNK_DARK_BLUE "#5F7CD8"
 
-
 int wifiConnected = 0;
 int waterLow = 0;
 int watered = 0;
 int ledLastState = 0;
 
-
-
+//Physical Pins
 const int pumpPin = 14; // D5
 const int floatPin = 13; // D7
 const int wateredPin = A0; // Read
@@ -140,11 +138,6 @@ const int ledPin = 0; // D3 Hardware LED
  *  V4  - Timer
  *  V12 - Pump
  */
-
-//Physical Pins
-//const int ledPin = 0; // D3
-//const int tempPin = 14; // D5
-//const int buttonPin = 13; // D7
 
 // FUNCTIONS **************************************
 
@@ -168,7 +161,6 @@ const int ledPin = 0; // D3 Hardware LED
  *  
  *  Pump On - Off
  *  Interface --> Server --> Device
- *   
  */
 
 
@@ -275,22 +267,6 @@ BLYNK_WRITE(V1)
   Serial.println(pinValue);
 }
 
-/* GET EVENTS FROM BLYNK
- *   App project setup:
- *   Timer widget attached to V4 and running project.
- 
-BLYNK_WRITE(V4)
-{
-  // You'll get HIGH/1 at startTime and LOW/0 at stopTime.
-  // this method will be triggered every day
-  // until you remove widget or stop project or
-  // clean stop/start fields of widget
-  Serial.print("Got a value: ");
-  Serial.println(param.asStr());
-} 
-
-*/
-
 // Device --> Server --> Interface
 void V5Push()
 // Adapted from Blynk example VirtualPinWrite
@@ -324,36 +300,8 @@ BLYNK_WRITE(V4)
 
 
 /*
- *  **********************************************************
-
-  Simple push notification example
-
-  App project setup:
-    Push widget
-
-  Connect a button to pin 2 and GND...
-  Pressing this button will also push a message! ;)
- **************************************************************
- */
- void notifyOnButtonPress()
-{
-  // Invert state, since button is "Active LOW"
-  int isButtonPressed = !digitalRead(2);
-  if (isButtonPressed) {
-    Serial.println("Button is pressed.");
-
-    // Note:
-    //   We allow 1 notification per 5 seconds for now.
-    Blynk.notify("Yaaay... button is pressed!");
-
-    // You can also use {DEVICE_NAME} placeholder for device name,
-    // that will be replaced by your device name on the server side.
-    //Blynk.notify("Yaaay... {DEVICE_NAME}  button is pressed!");
-  }
-}
-
-
-/* * SETUP ****************************************/
+SETUP ****************************************
+*/
  
 void setup()
 {
@@ -396,11 +344,6 @@ Blynk.begin(auth, ssid, pass);
   // Every second
   timer.setInterval(1000L, perSecond); //Watered overflow or drip sensor
 
-  // Setup notification button on pin 2
-  pinMode(2, INPUT_PULLUP);
-  // Attach pin 2 interrupt to our handler
-  attachInterrupt(digitalPinToInterrupt(2), notifyOnButtonPress, CHANGE);
-
 //Pump
 // !! Had problem
 // See https://community.blynk.cc/t/on-boot-up-pins-go-high/10845/49
@@ -408,7 +351,7 @@ Blynk.begin(auth, ssid, pass);
 // related to state of float? D7 mode was not set
 
 
-//!! Problem
+//!!TODO Problem
 // Ok so some pins go high on boot probably depends on dev board
 // Pins behave differently if they are powered by VIN or by the USB
 // pinMode also impacts this
@@ -429,8 +372,10 @@ digitalWrite(wateredVCCPin, HIGH);
 
 }
 
-//* * MAIN LOOP **************************************
- 
+/* 
+MAIN LOOP **************************************
+*/ 
+
 void loop()
 {
 // digitalWrite(ledPin, HIGH); 
