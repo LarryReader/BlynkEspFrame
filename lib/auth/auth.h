@@ -17,7 +17,7 @@ char pass[] = "m4--0t";
 //char pass[] = "m4--0t";
 
 //char ssid[] = "LRPixel";
-//char pass[] = "LRPixel222";
+//char pass[] = "LR--22";
 
 //char ssid[] = "D1B436";
-//char pass[] = "55539777";
+//char pass[] = "55--77";
