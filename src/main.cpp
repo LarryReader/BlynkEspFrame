@@ -98,8 +98,8 @@ V2 jumper for battery powered mode
 // Timer 
 BlynkTimer timer;
 //Timing when offline !!Can still use the Blynk Timer when offline??
-int lastConnectionAttempt = millis();
-int connectionDelay = 5000; // try to reconnect every 5 seconds
+unsigned long lastConnectionAttempt = millis();
+unsigned long connectionDelay = 5000; // try to reconnect every 5 seconds
 
 //Timer5Sec
 int lastRun5 = millis();
@@ -394,14 +394,14 @@ void loop()
       lastConnectionAttempt = millis();
       Serial.println(" Connecting ...");
       // attempt to connect to Wifi network:
-      if (pass && strlen(pass))
-      {
+      //if (pass && strlen(pass))
+      //{
         WiFi.begin((char*)ssid, (char*)pass);
-      }
-      else
-      {
-        WiFi.begin((char*)ssid); // For open networks I guess.
-      }
+      //}
+      //else
+      //{
+      //  WiFi.begin((char*)ssid); // For open networks I guess.
+      //}
     }
   }
   else
