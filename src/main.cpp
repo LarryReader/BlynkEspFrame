@@ -16,11 +16,15 @@
  */
 
 /* TODO *******************
-Pump stop on water low
-Pump stop on watered sensor
+Test Pump stop on water low
+Test Pump stop on watered sensor
 Watered sensor power on for watering cycle
  * Pump cycle timing
-
+VLed color feedback 
+  Blue - watering
+  Red - out of water
+  Green - ok
+Last Complete Watered date
 
 WiFiconnected blinker - needs to blink V2 - but not if on battery power
 V2 jumper for battery powered mode
@@ -187,7 +191,6 @@ void perSecond() // Do every second
        Serial.println("Float High");
        led1.setColor(BLYNK_GREEN); 
     }
-
 }
 
 
