@@ -367,7 +367,7 @@ pinMode(floatPin, INPUT);
 //pinMode(LED_BUILTIN, OUTPUT);
 
 pinMode(wateredVCCPin, OUTPUT);
-// !! just switch following high for watered read to save power and lower corrosion
+// TODO !! TODO just switch following high for watered read to save power and lower corrosion
 digitalWrite(wateredVCCPin, HIGH);
 
 }
