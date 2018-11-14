@@ -54,39 +54,49 @@ V2 jumper for battery powered mode
  *  
  */
 
+/* 
+ * Blynk App > Device - Blynk Example - Get Data 
+ * BLYNK_WRITE(V1){ //Called every time Widget on V1 in Blynk app writes values to V1
+ *  int pinValue = param.asInt(); // assigning incoming value from Interface pin V1 to a variable
+ *  }
+ *  
+ * Device > Blynk App - Blynk Example - Push Data
+ *  Blynk.virtualWrite(V7, value); //Trigger for Eventor Notifications
+ *  
+ * Blynk App Request < From Device - Blynk Example - Push Data On Request
+ * BLYNK_READ(V8){
+ *  Blynk.virtualWrite(PIN_UPTIME, millis() / 1000);
+ *{
+ */
 
 /* Comment this out to disable prints and save space */
 #define BLYNK_PRINT Serial
 
+/* AUTHORIZATIONS ********************/
+#include "auth.h"
 
-/* * LIBRARIES ********************
-*/
+/* GLOBAL VARS **********************/
 
-// Platform
+// Libraries
+
+// Platform ***
 #include <Arduino.h>
 
-// ESP32 Libs
+// Boards   ***
+
+// ESP32
 // #include <WiFi.h>
 // #include <WiFiClient.h>
 // #include <BlynkSimpleEsp32.h>
 
-// ESP8266 Libs
+// ESP8266 
 #include <ESP8266WiFi.h>
 #include <BlynkSimpleEsp8266.h>
 
+// Objects
 
-/* INITIALIZATIONS ****************/
-
-// Timer object
+// Timer 
 BlynkTimer timer;
-
-
-
-/* AUTHORIZATIONS ********************/
-#include "auth.h"
-
-/* GLOBAL VARS *********************/
-
 //Timing when offline !!Can still use the Blynk Timer when offline??
 int lastConnectionAttempt = millis();
 int connectionDelay = 5000; // try to reconnect every 5 seconds
@@ -98,12 +108,6 @@ int lastRun5 = millis();
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
-
-
-int wifiConnected = 0;
-int waterLow = 0;
-int watered = 0;
-int ledLastState = 0;
 
 // Attach virtual serial terminal to Virtual Pin V0
 WidgetTerminal terminal(V0);
@@ -117,6 +121,14 @@ bool ledStatus = false;
 #define BLYNK_RED       "#D3435C"
 #define BLYNK_DARK_BLUE "#5F7CD8"
 
+
+int wifiConnected = 0;
+int waterLow = 0;
+int watered = 0;
+int ledLastState = 0;
+
+
+
 const int pumpPin = 14; // D5
 const int floatPin = 13; // D7
 const int wateredPin = A0; // Read
@@ -128,6 +140,11 @@ const int ledPin = 0; // D3 Hardware LED
  *  V4  - Timer
  *  V12 - Pump
  */
+
+//Physical Pins
+//const int ledPin = 0; // D3
+//const int tempPin = 14; // D5
+//const int buttonPin = 13; // D7
 
 // FUNCTIONS **************************************
 
@@ -336,12 +353,8 @@ BLYNK_WRITE(V4)
 }
 
 
-/*
- * ************************************************
- * * SETUP ****************************************
- * ************************************************
- */
-
+/* * SETUP ****************************************/
+ 
 void setup()
 {
 
@@ -360,14 +373,10 @@ Blynk.begin(auth, ssid, pass);
   // Setup periodic color change
   
 
-/*
- * **********************************************
- * * TIMER FUNCTION CALLS ***********************
- * **********************************************
- */
+// TIMER FUNCTION CALLS ***********************
+
 
  // NOTE Can not make multiple calls at same timer interval with timer.setInterval below.
-
 
 //TODO - Consolidate into frequency like have a every1second function that then 
          // calls all everything we want to do every second
@@ -420,10 +429,7 @@ digitalWrite(wateredVCCPin, HIGH);
 
 }
 
-/* **************************************************
- * * MAIN LOOP **************************************
- * **************************************************
- */
+//* * MAIN LOOP **************************************
  
 void loop()
 {
@@ -434,11 +440,8 @@ void loop()
   if (WiFi.status() != WL_CONNECTED)
   {
     
-/*
- * ****************************************************
- * * BEGIN OFFLINE CODE *******************************
- * ****************************************************
- */
+//* * BEGIN OFFLINE CODE *******************************
+ 
     Serial.println(" Offline ...");
     // check delay:
     if (millis() - lastConnectionAttempt >= connectionDelay)
@@ -473,11 +476,7 @@ wifiConnected = 1;
       Serial.println(lastRun5);
     }
 
-/* 
- ********************************************************
- * * BEGIN BLYNK ONLINE CODE ****************************
- ********************************************************
- */
+// * BEGIN BLYNK ONLINE CODE ****************************
   
     Blynk.run();
     timer.run(); // BlynkTimer - use the timer.setInterval call in setup
