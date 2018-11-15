@@ -15,9 +15,16 @@
  * Pump cycle timing
  */
 
+/*
+  Pump features tested
+  With pump on via Blynk button
+    When float goes low pump turns off
+      When float comes back high pump does not go back on till Blynk button is cycled
+    When watered gripped with wet fingers pump turns off
+      Stays off till Blynk button is cycled
+ */
+
 /* TODO *******************
-Test Pump stop on water low
-Test Pump stop on watered sensor
 Watered sensor power on for watering cycle
  * Pump cycle timing
 VLed color feedback 
@@ -25,6 +32,8 @@ VLed color feedback
   Red - out of water
   Green - ok
 Last Complete Watered date
+TODO If the password is wrong the serial output just stops or actually like 
+    Platformio crashed  
 
 WiFiconnected blinker - needs to blink V2 - but not if on battery power
 V2 jumper for battery powered mode
@@ -428,7 +437,7 @@ wifiConnected = 1;
   
     Blynk.run();
     timer.run(); // BlynkTimer - use the timer.setInterval call in setup
-digitalWrite(ledPin, LOW);
+//digitalWrite(ledPin, LOW);
    
     //Serial.print("Status Button");
     //Serial.println(analogRead(34));
