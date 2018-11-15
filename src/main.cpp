@@ -1,5 +1,25 @@
-/*
- * Board NodeMCU 1.0 ESP-12E
+//BlynkEspFrame
+
+/* TODO *******************
+Pump off if offline
+Get offline code working
+Watered sensor power on for watering cycle
+  Pump cycle timing
+Put color key on BLYNK
+VLed color feedback 
+  Blue - watering
+  Red - out of water
+  Green - ok
+  Black - water off per watered sensor
+Last Complete Watered date
+If the password is wrong the serial output just stops or actually like 
+    Platformio crashed? No  
+WiFiconnected blinker - needs to blink V2 - but not if on battery power
+V2 jumper for battery powered mode
+Add the debug on code for Blynk Terminal
+
+*/
+ /* Board NodeMCU 1.0 ESP-12E
  * 11/13/18 Installed PlatformIO on Surface
  * 11/9/18 Added to Git repository BlynkEspFrame
  * Ported from Arduino IDE MinimalPlanterV8-8266.ino To PlatformIO 11/9/18
@@ -24,21 +44,7 @@
       Stays off till Blynk button is cycled
  */
 
-/* TODO *******************
-Watered sensor power on for watering cycle
- * Pump cycle timing
-VLed color feedback 
-  Blue - watering
-  Red - out of water
-  Green - ok
-Last Complete Watered date
-TODO If the password is wrong the serial output just stops or actually like 
-    Platformio crashed  
 
-WiFiconnected blinker - needs to blink V2 - but not if on battery power
-V2 jumper for battery powered mode
-
-*/
 
 
 
@@ -122,22 +128,26 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
+/* Blynk Virtual Pins - Feature - Objects
+ *  V0  - Terminal - terminal
+ *  V1  - LED Water Level Float - led1
+ *  V4  - Timer - 
+ *  V7  - WateredTrigger - drip sensor - Slider
+ *  V12 - Pump
+ */
+
 //Blynk Widgets
 WidgetTerminal terminal(V0);
+bool debug = false;
 
 WidgetLED led1(V1);
 bool ledStatus = false;
-
-#define BLYNK_GREEN     "#23C48E"
 #define BLYNK_BLUE      "#04C0F8"
 #define BLYNK_YELLOW    "#ED9D00"
 #define BLYNK_RED       "#D3435C"
 #define BLYNK_DARK_BLUE "#5F7CD8"
+#define BLYNK_BLACK     "#000000"
 
-int wifiConnected = 0;
-int waterLow = 0;
-int watered = 0;
-int ledLastState = 0;
 
 //Physical Pins
 const int pumpPin = 14; // D5
@@ -145,12 +155,15 @@ const int floatPin = 13; // D7
 const int wateredPin = A0; // Read
 const int wateredVCCPin = 12; // Supply 3.3v to wateredPin Read
 const int ledPin = 0; // D3 Hardware LED
+//TODO add builtin LED
 
-/* Blynk Virtual Pins
- *  V1  - LED - Water Level Float
- *  V4  - Timer
- *  V12 - Pump
- */
+//Other Globals
+char firmwareVersion[] = "BlynkEspFrame-main.cpp";
+int wifiConnected = 0;
+int waterLow = 0; //Water reseviour low
+int watered = 0; //Water overflow from watering sensor
+int wateredThreshold = 250 //Water sensor sensitivity
+int ledLastState = 0;
 
 // FUNCTIONS **************************************
 
@@ -183,11 +196,12 @@ void perSecond() // Do every second
   watered = analogRead(wateredPin);
   Serial.print("wateredPin = ");
   Serial.println(watered);
-  // TODO Try to set a variable to the value of a Virtual pin - slider would be cool
-  // TODO Then enable or disable the pump off on watered via virtual pin 
-  if(watered > 250){ 
+  //TODO Try to set a variable to the value of a Virtual pin - slider would be cool
+  //TODO Then enable or disable the pump off on watered via virtual pin 
+  if(watered > wateredThreshold){ 
   // Watered - turn off pump
-  digitalWrite(pumpPin, LOW);
+    digitalWrite(pumpPin, LOW);
+    led1.setColor(BLYNK_BLACK);
   }
   // Float / Water level
     waterLow  = digitalRead(floatPin);
@@ -202,6 +216,37 @@ void perSecond() // Do every second
     }
 }
 
+
+void debugPrint()
+{
+  if (debug) {
+    terminal.print("Watered sensor threshold = ");
+    terminal.println(wateredThreshold); 
+    //terminal.print("lowTempThreshold = ");
+    //terminal.println(lowTempThreshold); 
+  }
+}
+
+BLYNK_WRITE(V0) // Terminal Widget
+{
+    if (String("debug on") == param.asStr()) {
+    debug = true;
+    terminal.println("ON") ;
+    } 
+    
+    if (String("debug off") == param.asStr()){
+    debug = false;
+    terminal.println("OFF") ;
+    
+    // Send it back
+    terminal.print("Debug is ");
+    terminal.write(param.getBuffer(), param.getLength());
+    terminal.println();
+  }
+
+  // Ensure everything is sent
+  terminal.flush();
+}
 
 /*
 void readWatered()
@@ -288,7 +333,7 @@ void V5Push()
 {
   Blynk.virtualWrite(V5, millis() / 1000);
   Serial.println("V5Push");
-  terminal.println("MinimalPlanterV8-8266");
+  terminal.println(firmwareVersion);
 }
 
 
@@ -304,9 +349,11 @@ BLYNK_WRITE(V4)
   Serial.println(pinValue);
   if(pinValue == 1){
     digitalWrite(pumpPin, HIGH);
+    led1.setColor(BLYNK_Blue);
   }
   else{
     digitalWrite(pumpPin, LOW);
+    led1.setColor(BLYNK_BLACK);
   }
 }
 
@@ -318,8 +365,9 @@ SETUP ****************************************
 void setup()
 {
 
-// Debug console
+//Debug 
 Serial.begin(9600);
+Serial.println(firmwareVersion);
 
 Blynk.begin(auth, ssid, pass);
 
