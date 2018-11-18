@@ -145,6 +145,7 @@ bool ledStatus = false;
 #define BLYNK_BLUE      "#04C0F8"
 #define BLYNK_YELLOW    "#ED9D00"
 #define BLYNK_RED       "#D3435C"
+#define BLYNK_GREEN     "#23C48E"
 #define BLYNK_DARK_BLUE "#5F7CD8"
 #define BLYNK_BLACK     "#000000"
 
@@ -162,7 +163,7 @@ char firmwareVersion[] = "BlynkEspFrame-main.cpp";
 int wifiConnected = 0;
 int waterLow = 0; //Water reseviour low
 int watered = 0; //Water overflow from watering sensor
-int wateredThreshold = 250 //Water sensor sensitivity
+int wateredThreshold = 250; //Water sensor sensitivity
 int ledLastState = 0;
 
 // FUNCTIONS **************************************
@@ -189,33 +190,50 @@ int ledLastState = 0;
  *  Interface --> Server --> Device
  */
 
-
-void perSecond() // Do every second
-{
-  // Watered - Drip / Overflow sensor
-  watered = analogRead(wateredPin);
-  Serial.print("wateredPin = ");
-  Serial.println(watered);
-  //TODO Try to set a variable to the value of a Virtual pin - slider would be cool
-  //TODO Then enable or disable the pump off on watered via virtual pin 
-  if(watered > wateredThreshold){ 
-  // Watered - turn off pump
-    digitalWrite(pumpPin, LOW);
-    led1.setColor(BLYNK_BLACK);
-  }
-  // Float / Water level
-    waterLow  = digitalRead(floatPin);
+bool checkFloat(){
+  waterLow  = digitalRead(floatPin);
     if(waterLow){
-      Serial.println("Float Low");
       led1.setColor(BLYNK_RED);
       digitalWrite(pumpPin, LOW);
+      return  true;
     }
     else{
-       Serial.println("Float High");
-       led1.setColor(BLYNK_GREEN); 
+      led1.setColor(BLYNK_GREEN);
+      return false;
     }
 }
 
+bool checkWatered(){
+  watered = analogRead(wateredPin);
+  if(watered > wateredThreshold){ 
+    // Watered - turn off pump
+    digitalWrite(pumpPin, LOW);
+    led1.setColor(BLYNK_BLACK);
+    return true;
+  }
+    else{
+      return false;
+    }
+  } 
+
+//TODO Try to set a variable to the value of a Virtual pin - slider would be cool
+//TODO Then enable or disable the pump off on watered via virtual pin
+
+void perSecond() // Do every second
+{
+  //Check Watered then set pump and led
+  if(checkWatered()){
+    Serial.print("watered");
+  }
+
+  //Check Float then set pump and led
+  if(checkFloat()){ //Note function checkFloat must preceed this function or get not is scope error on compile
+      Serial.println("Float High");
+    }
+    else{
+      Serial.println("Float Low");
+    }
+}
 
 void debugPrint()
 {
@@ -247,49 +265,6 @@ BLYNK_WRITE(V0) // Terminal Widget
   // Ensure everything is sent
   terminal.flush();
 }
-
-/*
-void readWatered()
-{
-  watered = analogRead(wateredPin);
-  Serial.print("wateredPin = ");
-  Serial.println(watered);
-}
-*/
-
-/*
-void checkFloat()
-  {
-  waterLow  = digitalRead(floatPin);
-    if(waterLow){
-      Serial.println("Float Low");
-    }
-    else{
-       Serial.println("Float High"); 
-      
-    }
-    
-  }
-*/
-
-// V1 LED Widget is blinking
-
-/*
-void blinkLedWidget()
-{
-  if (ledStatus) {
-    led1.setColor(BLYNK_RED);
-    Serial.println("LED on V1: red");
-    ledStatus = false;
-  } else {
-    led1.setColor(BLYNK_GREEN);
-    Serial.println("LED on V1: green");
-    ledStatus = true;
-  }
-}
-*/
-
-
 
 void connectionBlink()
   {
@@ -349,7 +324,7 @@ BLYNK_WRITE(V4)
   Serial.println(pinValue);
   if(pinValue == 1){
     digitalWrite(pumpPin, HIGH);
-    led1.setColor(BLYNK_Blue);
+    led1.setColor(BLYNK_BLUE);
   }
   else{
     digitalWrite(pumpPin, LOW);
@@ -359,7 +334,7 @@ BLYNK_WRITE(V4)
 
 
 /*
-SETUP ****************************************
+SETUP *******************************************************************
 */
  
 void setup()
@@ -382,27 +357,23 @@ Blynk.begin(auth, ssid, pass);
   
 
 // TIMER FUNCTION CALLS ***********************
-
-
- // NOTE Can not make multiple calls at same timer interval with timer.setInterval below.
-
-//TODO - Consolidate into frequency like have a every1second function that then 
-         // calls all everything we want to do every second
- 
   // Call Function on timed interval
   //               delay - function
+timer.setInterval(1000L, perSecond);
+
+// NOTE Can not make multiple calls at same timer interval with timer
+
   timer.setInterval(10000L, V5Push); //Every 10 seconds
 
   // WiFi Connected Blinker 
-  timer.setInterval(1000L, connectionBlink);
+ // timer.setInterval(1000L, connectionBlink);
 
   // Setup a function to be called every 5 seconds
  // timer.setInterval(500L, checkFloat); //Also stuck the CONNECTED Blink in here
 
   //timer.setInterval(2000L, blinkLedWidget);
  
-  // Every second
-  timer.setInterval(1000L, perSecond); //Watered overflow or drip sensor
+
 
 //Pump
 // !! Had problem
