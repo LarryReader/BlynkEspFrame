@@ -1,10 +1,12 @@
 //BlynkEspFrame
 
 /* TODO *******************
-Pump off if offline
+Pump off if offline - update pump features tested below
+Pump cycle resume when online
+Pump cycle resume when water refilled
 Get offline code working
 Watered sensor power on for watering cycle
-  Pump cycle timing
+Pump cycle timing
 Put color key on BLYNK
 VLed color feedback 
   Blue - watering
