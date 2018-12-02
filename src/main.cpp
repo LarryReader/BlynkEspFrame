@@ -59,7 +59,7 @@ END of TODO's
  * Historical reference Google Drive\Projects\GreensGrower\V4\Electronics\Software\Arduino\GreensGrower4.8
  * 10/9/18 Removed lots of comments and unrelated code from V6
  * 10/12/18 V7 working with protoboard tests
- * 12/1/18 Refinements installed in PlantFrame[?] 1st 4 up prototoype
+ * 12/1/18 Refinements for PlantFrame[?] 1st 4 up prototoype
  */
 
 /*
@@ -85,14 +85,7 @@ END of TODO's
       Stays off till Blynk button is cycled
  */
 
-
-
-
-
 /*                      
- *                    https://arduino.stackexchange.com/questions/25260/basic-question-esp8266-board-pins
- *                    ESP8266 LoLin pinout at - https://kevoster.wordpress.com/2016/07/14/esp-8266-nodemcu-lolin/
- *                    Board num--Arduino IDE 
  *                         
  *                         
  *                         ESP 8266 12E   Pin       
@@ -182,9 +175,10 @@ const int   daylightOffset_sec = 3600;
  * ----------------------------------
  *  V0  - terminal 
  *  V1  - led1 -LED Water Level Float - led1
- *  V4  - Timer - 
- *  V7  - WateredTrigger - drip sensor - Slider
- *  V12 - Pump
+ *  V2  - 
+ *  V4  - PushButton - Pump ON  
+ *  
+ *  V8  - WateredSensitivity - drip sensor - Step
  */
 
 //Blynk Widgets
@@ -360,16 +354,16 @@ void V5Push()
 }
 
 
-// This function will be called every time the Widget
-// in Blynk app writes values to the Virtual Pin 21
+
+// Widget push button Pump On
 BLYNK_WRITE(V4)
 {
-  int pinValue = param.asInt(); // assigning incoming value from pin V21 to a variable
+  int pinValue = param.asInt(); // assigning incoming value from pin V4 to a variable
   // You can also use:
   // String i = param.asStr();
   // double d = param.asDouble();
-  Serial.print("V4 Button value is: ");
-  Serial.println(pinValue);
+  // Serial.print("V4 Pump Button value is: ");
+  // Serial.println(pinValue);
   if(pinValue == 1){
     digitalWrite(pumpPin, HIGH);
     led1.setColor(BLYNK_BLUE);
