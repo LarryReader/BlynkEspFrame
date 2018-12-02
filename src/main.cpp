@@ -1,25 +1,57 @@
 //BlynkEspFrame
 
-/* TODO *******************
+/* !!TODO NOW *******************
+
+Timer - ideal operation
+  Timer ? Eventor Time event (manageable on phone)
+    Time event sets Pump Cycle Start flag / Vpin #?
+    ESP starts pump cycle (is always watching for Pump Cycle Start Flag)
+    ESP does pump cycle / however that works for this device / and tracks status
+    ESP sends status back on another Vpin #?
+    ESP Completes pump cylcle and updates status with timestamp - completed
+  Pump Cycle for bottom up - on power AC (always on)
+    Check status / float - watered
+      If OK
+        Turn on watervcc pin
+        Set onboard led mode
+        Set blynk led color
+        Send status
+        Water till watered pin up or timeout
+        Send status
+        Reset
+
+
+
+On board pull wateredPin low (A0)
 Pump off if offline
 Get offline code working
 Watered sensor power on for watering cycle
   Pump cycle timing
+ON board use builtInLED for offline notifications
 Put color key on BLYNK
 VLed color feedback 
   Blue - watering
+  Yellow ? watered
   Red - out of water
   Green - ok
   Black - water off per watered sensor
 Last Complete Watered date
+Time server is not being used? but would be good for timestamps? 
+// around line 128
 If the password is wrong the serial output just stops or actually like 
     Platformio crashed? No  
 WiFiconnected blinker - needs to blink V2 - but not if on battery power
 V2 jumper for battery powered mode
 Add the debug on code for Blynk Terminal
 
+TODO Future
+
+END of TODO's
 */
- /* Board NodeMCU 1.0 ESP-12E
+
+ /* 
+ *LOG
+ * Board NodeMCU 1.0 ESP-12E
  * 11/13/18 Installed PlatformIO on Surface
  * 11/9/18 Added to Git repository BlynkEspFrame
  * Ported from Arduino IDE MinimalPlanterV8-8266.ino To PlatformIO 11/9/18
@@ -27,7 +59,16 @@ Add the debug on code for Blynk Terminal
  * Historical reference Google Drive\Projects\GreensGrower\V4\Electronics\Software\Arduino\GreensGrower4.8
  * 10/9/18 Removed lots of comments and unrelated code from V6
  * 10/12/18 V7 working with protoboard tests
+ * 12/1/18 Refinements installed in PlantFrame[?] 1st 4 up prototoype
  */
+
+/*
+    Downloads, docs, tutorials: http://www.blynk.cc
+    Sketch generator:           http://examples.blynk.cc
+    Blynk community:            http://community.blynk.cc
+    Follow us:                  http://www.fb.com/blynkapp
+                                http://twitter.com/blynk_app
+*/                                
 
 /* FEATURES *****************
  * Water Level notification / pump stop
@@ -55,21 +96,21 @@ Add the debug on code for Blynk Terminal
  *                         
  *                         
  *                         ESP 8266 12E   Pin       
- *                       --A0     D0--GPIO16-- |X Needed for deep sleep
- *                       --GND    D1--GPIO5--  |
- *                       --VV     D2--GPIO4----|
- *                       --SD3    D3--GPIO0----| -- Led
- *                       --SD2    D4--GPIO2----|X BuiltIn LED pin 2 and Bootloader 
- *                       --SD1    3V3--3.3V----|V+ 
- *                       --CMD    GND--GPIO----|
- *                       --SD0    D5--GPIO14---| -- Mosfet to Pump
- *                       --CLK    D6--GPIO12---| -- Power to Watered sensor 
- *                       --GND    D7--GPIO13---| -- Float in
- *                       --3V3    D8--GPIO15---|xx ? Wants 10k pulldown ? Conflicts with serial output
- *                       --EN     RX--
- *                       --RST    TX--
- *                 Ground--GND    GND----------|
- *                 Vin 5v--Vin    3.3V-- 
+ *   From Watered sensor |--A0     D0--GPIO16-- |X Needed for deep sleep
+ *                       |--GND    D1--GPIO5--  |
+ *                       |--VV     D2--GPIO4----|
+ *                       |--SD3    D3--GPIO0----| -- Led
+ *                       |--SD2    D4--GPIO2----|X BuiltIn LED pin 2 and Bootloader 
+ *                       |--SD1    3V3--3.3V----|V+ 
+ *                       |--CMD    GND--GPIO----|
+ *                       |--SD0    D5--GPIO14---| -- Mosfet to Pump
+ *                       |--CLK    D6--GPIO12---| -- Power to Watered sensor 
+ *                       |--GND    D7--GPIO13---| -- Float in
+ *                       |--3V3    D8--GPIO15---|xx ? Wants 10k pulldown ? Conflicts with serial output
+ *                       |--EN     RX--
+ *                       |--RST    TX--
+ *                Ground |--GND    GND----------|
+ *                Vin 5v |--Vin    3.3V-- 
  *  
  */
 
@@ -123,14 +164,24 @@ unsigned long connectionDelay = 5000; // try to reconnect every 5 seconds
 //Timer5Sec
 int lastRun5 = millis();
 
-//Time
+//Timestamp - see TODO  
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
-/* Blynk Virtual Pins - Feature - Objects
- *  V0  - Terminal - terminal
- *  V1  - LED Water Level Float - led1
+// Widget Colors
+#define BLYNK_BLUE      "#04C0F8"
+#define BLYNK_YELLOW    "#ED9D00"
+#define BLYNK_RED       "#D3435C"
+#define BLYNK_GREEN     "#23C48E"
+#define BLYNK_DARK_BLUE "#5F7CD8"
+#define BLYNK_BLACK     "#000000"
+
+/* Blynk Virtual Pins
+ * vPin - Widget - Feature - Hardware
+ * ----------------------------------
+ *  V0  - terminal 
+ *  V1  - led1 -LED Water Level Float - led1
  *  V4  - Timer - 
  *  V7  - WateredTrigger - drip sensor - Slider
  *  V12 - Pump
@@ -142,21 +193,14 @@ bool debug = false;
 
 WidgetLED led1(V1);
 bool ledStatus = false;
-#define BLYNK_BLUE      "#04C0F8"
-#define BLYNK_YELLOW    "#ED9D00"
-#define BLYNK_RED       "#D3435C"
-#define BLYNK_GREEN     "#23C48E"
-#define BLYNK_DARK_BLUE "#5F7CD8"
-#define BLYNK_BLACK     "#000000"
-
 
 //Physical Pins
 const int pumpPin = 14; // D5
 const int floatPin = 13; // D7
 const int wateredPin = A0; // Read
-const int wateredVCCPin = 12; // Supply 3.3v to wateredPin Read
+const int wateredVCCPin = 12; // D6 Supply 3.3v to wateredPin Read
 const int ledPin = 0; // D3 Hardware LED
-//TODO add builtin LED
+const int builtInLed = 2; // D4 Hardware LED on Dev Board
 
 //Other Globals
 char firmwareVersion[] = "BlynkEspFrame-main.cpp";
@@ -205,10 +249,11 @@ bool checkFloat(){
 
 bool checkWatered(){
   watered = analogRead(wateredPin);
+
   if(watered > wateredThreshold){ 
     // Watered - turn off pump
     digitalWrite(pumpPin, LOW);
-    led1.setColor(BLYNK_BLACK);
+    led1.setColor(BLYNK_YELLOW); //TODO Make this Purple
     return true;
   }
     else{
@@ -216,14 +261,15 @@ bool checkWatered(){
     }
   } 
 
-//TODO Try to set a variable to the value of a Virtual pin - slider would be cool
+//TODO Try to set a variable to the value of a Virtual pin - use the ? + - widget would be cool
 //TODO Then enable or disable the pump off on watered via virtual pin
 
-void perSecond() // Do every second
+void perSecond() // Do every second //!!TODO Only checkWatered if pump is on
 {
   //Check Watered then set pump and led
   if(checkWatered()){
     Serial.print("watered");
+    led1.setColor(BLYNK_BLACK);
   }
 
   //Check Float then set pump and led
@@ -240,6 +286,8 @@ void debugPrint()
   if (debug) {
     terminal.print("Watered sensor threshold = ");
     terminal.println(wateredThreshold); 
+    terminal.print("wateredPin = ");
+    terminal.println(watered);
     //terminal.print("lowTempThreshold = ");
     //terminal.println(lowTempThreshold); 
   }
