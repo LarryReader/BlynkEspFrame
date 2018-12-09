@@ -1,5 +1,6 @@
 //BlynkEspFrame
 
+<<<<<<< HEAD
 /* !!TODO NOW *******************
 Get / Set Timestamp from internet
 Clean up serial prints - setup for certain serial prints if offline
@@ -93,6 +94,34 @@ Get offline code working
 Watered sensor power on for watering cycle
   Pump cycle timing
 ON board use builtInLED for offline notifications
+=======
+/* TODO *******************
+Pump off if offline - update pump features tested below
+Pump off if offline - update pump features tested below
+PUMPCYCLE - Modes? Slow Soak / Bottom Up The mode works with the watered sensor or not
+Works with Timer - Pump cycle strategy - Low Water and over water sensors
+
+Perhaps for not there is somthing of a watered sensor over ride in case that sensor fails
+note multiple PumpCycles probably not required for a bottom soak up setup 
+  PumpCycles - like one of them does want to handle where a pumplcycle
+  where the watering complete sensor is not triggered does want to work
+Virtual Pins
+  VP PumpCyclesStart
+  VP PumpCycles
+  VP PumpCycleLength
+  VP PumpCycleCurrentDuration
+This verion assumes being online
+  Blynk timer sets PumpC?yclesStart
+  Local intCycleCount tracks completed pump cycles
+  if it goes offline picks cycles back up when back online
+Blynk timer > Sets a Virtual Pin 
+
+Pump cycle resume when online
+Pump cycle resume when water refilled
+Get offline code working
+Watered sensor power on for watering cycle
+Pump cycle timing
+>>>>>>> fa62b1834b56d4cd2e7a4da10c344740b609257f
 Put color key on BLYNK
 VLed color feedback 
   Blue - watering
@@ -249,7 +278,11 @@ const int floatPin = 13; // D7
 const int wateredPin = A0; // Read
 const int wateredVCCPin = 12; // D6 Supply 3.3v to wateredPin Read
 const int ledPin = 0; // D3 Hardware LED
+<<<<<<< HEAD
 const int builtInLed = 2; // D4 Hardware LED on Dev Board
+=======
+//!!!TODO add builtin LED use builtin LED for connections blink
+>>>>>>> fa62b1834b56d4cd2e7a4da10c344740b609257f
 
 //Other Globals
 char firmwareVersion[] = "BlynkEspFrame-main.cpp";
@@ -425,6 +458,7 @@ BLYNK_WRITE(V0)
   terminal.flush();
 }
 
+<<<<<<< HEAD
 /*
 V1
 WidgetLED led1(V1);- Already instantiated
@@ -492,6 +526,9 @@ BLYNK_WRITE(V8)
 }
 
 void connectionBlink()
+=======
+void connectionBlink() //!!!Pass the ledPin as parameter so can easily change without editing func
+>>>>>>> fa62b1834b56d4cd2e7a4da10c344740b609257f
   {
     if(wifiConnected){
       // Toggle led
