@@ -1,8 +1,74 @@
 //BlynkEspFrame
 
 /* !!TODO NOW *******************
+Get / Set Timestamp from internet
+Clean up serial prints - setup for certain serial prints if offline
+get the online blynker going again 
 
-Timer - ideal operation
+TODO Later **********************
+Minimal Offline operation 
+??? what is char* vrs char[]
+BLYNK based wateringTimeout step
+Neopix colors for different offline errors 
+
+
+/* Recent comments
+12/9/18 Forgot how much strings suck in C
+changed all status and state to Ints
+*/
+
+
+
+
+
+boardState - State Machine
+//OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+
+boardStatus State informed by Status
+  Error conditions / Status
+  ----------------
+  //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+
+  wateringStatus
+  ---------------
+  Pumping=1 Pausing=2 Complete=3
+  Pausing=2 - only for slow soaking planters
+  
+
+
+STATE   |  LED  |   Because            Can Change To     Change Condition  Notes
+--------------------------------------------------------------------------
+OK      | Green | Watered &          |  Error              Water Gone or              
+        |       | No Error           |                     Battery Low or
+--------------------------------------------------------------------------
+Water   | Yellow| Timer start on V2  |
+--------------------------------------------------------------------------
+Watering| Blue  | Pump Cycle Started |  Pump Cycle Complete|  Completes or Error
+        |       |                    |  Error              |
+--------------------------------------------------------------------------
+Watered | Purple| Pump Cycle Complete|  OK                 | Complete notification timeout or Error                       
+        |       |                    |  Error               
+--------------------------------------------------------------------------        
+Error   | Red   | Water Gone or      | OK                  Error resolved
+        |       | Battery Low or     |
+        |       | Offline            |
+--------------------------------------------------------------------------
+
+
+Timer / BLYNK Eventor
+  At 11 am on Sat - send notification
+    set V2 to 1 - Pump Cycle start flag - Email Pump Cycle Started
+        
+  For bottom up tray fill / overflow type planters
+    On ESP - when V2 goes to 1 begin pump cycle
+    Pump for a set period of time or until Watered sensor fires
+    Monitor pump cycle via timer monitor V3 - how does that work? Might not need another Vpin
+    I think I want when V2 goes high. For the blynk app ? another timer to check back in on 
+      the status of V2 to confirm things?
+  
+  For slow soak type planters
+
+- ideal operation
   Timer ? Eventor Time event (manageable on phone)
     Time event sets Pump Cycle Start flag / Vpin #?
     ESP starts pump cycle (is always watching for Pump Cycle Start Flag)
@@ -19,7 +85,6 @@ Timer - ideal operation
         Water till watered pin up or timeout
         Send status
         Reset
-
 
 
 On board pull wateredPin low (A0)
@@ -150,14 +215,14 @@ END of TODO's
 
 // Timer 
 BlynkTimer timer;
-//Timing when offline !!Can still use the Blynk Timer when offline??
+//Timing when offline !!TODO Can still use the Blynk Timer when offline??
 unsigned long lastConnectionAttempt = millis();
 unsigned long connectionDelay = 5000; // try to reconnect every 5 seconds
 
 //Timer5Sec
 int lastRun5 = millis();
 
-//Timestamp - see TODO  
+//Timestamp
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
@@ -168,18 +233,8 @@ const int   daylightOffset_sec = 3600;
 #define BLYNK_RED       "#D3435C"
 #define BLYNK_GREEN     "#23C48E"
 #define BLYNK_DARK_BLUE "#5F7CD8"
+#define BLYNK_PURPLE    "#FF33FB"
 #define BLYNK_BLACK     "#000000"
-
-/* Blynk Virtual Pins
- * vPin - Widget - Feature - Hardware
- * ----------------------------------
- *  V0  - terminal 
- *  V1  - led1 -LED Water Level Float - led1
- *  V2  - 
- *  V4  - PushButton - Pump ON  
- *  
- *  V8  - WateredSensitivity - drip sensor - Step
- */
 
 //Blynk Widgets
 WidgetTerminal terminal(V0);
@@ -198,13 +253,22 @@ const int builtInLed = 2; // D4 Hardware LED on Dev Board
 
 //Other Globals
 char firmwareVersion[] = "BlynkEspFrame-main.cpp";
-int wifiConnected = 0;
-int waterLow = 0; //Water reseviour low
-int watered = 0; //Water overflow from watering sensor
+int boardStatus = 0; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+int boardState = 0; // OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+bool wifiConnected = false;
+bool waterLow = false; //Water reseviour low
+int watered = 0; //Water overflow from watering sensor - analog
 int wateredThreshold = 250; //Water sensor sensitivity
-int ledLastState = 0;
+int wateringStatus = 0; //Pumping=1 Pausing=2 Complete=3
+int wateringTimeout = 2400; // In seconds? !!TODO How does this timer work? A counter in per second?
+//TODO How to retain values through a restart - like lastWatered
+char lastWatered[]= "NaN"; //Last pump cycle complete timestamp
+int ledLastState = 0; //?Helps with state management?
 
-// FUNCTIONS **************************************
+/* **********************************************
+ FUNCTIONS **************************************
+*************************************************
+*/
 
 /* 
  *  For Minimal Planter
@@ -228,11 +292,48 @@ int ledLastState = 0;
  *  Interface --> Server --> Device
  */
 
+/*
+State()
+If state = OK
+  - Confirm state
+    if(!wifiConnected){
+x  call checkOnline()
+  call checkFloat()
+  call checkBattery()
+  If state = OK - still
+    If status = watering
+      call pumpCycle()
+    else
+      call checkWaterNowFlag()
+
+Implimentation
+Function State() called every second encapsulates State Machine logic
+  State() calls helper functions like bool checkFloat()
+
+Error Status
+  WaterGone
+  BatteryLow
+  Offline
+
+State Machine
+OK > Water (pushed by blynk) > Watering > Watered > OK || Error
+Encapsulates a state machine logic, called every second 
+   Calls helper functions and sets the state
+      Helper functions 
+        return values and set Status to resolve back in function State
+        set hardware changes
+        set interface / BLYNK values
+
+State Machine
+OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+Runs every second - perSecond() */
+
 bool checkFloat(){
   waterLow  = digitalRead(floatPin);
     if(waterLow){
       led1.setColor(BLYNK_RED);
       digitalWrite(pumpPin, LOW);
+      boardStatus = 1; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
       return  true;
     }
     else{
@@ -241,13 +342,19 @@ bool checkFloat(){
     }
 }
 
+
+
+
+
 bool checkWatered(){
   watered = analogRead(wateredPin);
 
   if(watered > wateredThreshold){ 
     // Watered - turn off pump
-    digitalWrite(pumpPin, LOW);
-    led1.setColor(BLYNK_YELLOW); //TODO Make this Purple
+    digitalWrite(pumpPin, LOW); //Just to make sure pump is off
+    boardState = 3; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    led1.setColor(BLYNK_PURPLE); 
+    //!!TODO - Is this where we push last watered timestamp - call for the time here?
     return true;
   }
     else{
@@ -255,29 +362,24 @@ bool checkWatered(){
     }
   } 
 
-//TODO Try to set a variable to the value of a Virtual pin - use the ? + - widget would be cool
-//TODO Then enable or disable the pump off on watered via virtual pin
-
-void perSecond() // Do every second //!!TODO Only checkWatered if pump is on
-{
-  //Check Watered then set pump and led
-  if(checkWatered()){
-    Serial.print("watered");
-    led1.setColor(BLYNK_BLACK);
-  }
-
-  //Check Float then set pump and led
-  if(checkFloat()){ //Note function checkFloat must preceed this function or get not is scope error on compile
-      Serial.println("Float High");
-    }
-    else{
-      Serial.println("Float Low");
-    }
+// Device --> Server --> Interface
+void V5Uptime(){ // Push
+  Blynk.virtualWrite(V5, millis() / 1000);
 }
+
+// V6 - Watering Status
+void pushTimeStamp(){
+  //TODO get Timestamp
+  Blynk.virtualWrite(V6, lastWatered);
+}
+
+//TODO Then enable or disable the pump off on watered via virtual pin
 
 void debugPrint()
 {
   if (debug) {
+    terminal.print("Status = ");
+    terminal.println(boardStatus); 
     terminal.print("Watered sensor threshold = ");
     terminal.println(wateredThreshold); 
     terminal.print("wateredPin = ");
@@ -287,7 +389,22 @@ void debugPrint()
   }
 }
 
-BLYNK_WRITE(V0) // Terminal Widget
+/* Blynk Virtual Pins
+ * vPin - Widget/var - Feature - Hardware
+ * ----------------------------------
+ *  V0  - terminal 
+ *  V1  - led1 -LED Water Level Float - 
+ *  V2  - Eventor Timer - Start Watering - 
+ *  V3  - wateringStatus 
+ *  V4  - PushButton - Pump ON  
+ *  V5  - Uptime
+ *  V6  - lastWatered - Last Watered TimeStamp
+ *  V7  - status - Current board status / details beyond LED color
+ *  V8  - step / WateredSensitivity -- drip sensor 
+ */
+
+//V0 Terminal Widget
+BLYNK_WRITE(V0) 
 {
     if (String("debug on") == param.asStr()) {
     debug = true;
@@ -306,6 +423,72 @@ BLYNK_WRITE(V0) // Terminal Widget
 
   // Ensure everything is sent
   terminal.flush();
+}
+
+/*
+V1
+WidgetLED led1(V1);- Already instantiated
+Use like 
+led1.setColor(BLYNK_BLUE);
+*/
+
+// Timer Flag to water - V2 - Eventor
+BLYNK_WRITE(V2) // Write value from Blynk app event - called by Blynk Library
+{
+  int vpinValue = param.asInt(); // assigning incoming value from pin V2 to a variable
+  // You can also use:
+  // String i = param.asStr();
+  // double d = param.asDouble();
+  // Serial.print("V4 Pump Button value is: ");
+  // Serial.println(pinValue);
+  if(vpinValue == 1){
+    wateringStatus = 1; //Pumping=1 Pausing=2 Complete=3
+    digitalWrite(pumpPin, HIGH);
+    led1.setColor(BLYNK_BLUE);
+  }
+  else{
+    digitalWrite(pumpPin, LOW);
+    led1.setColor(BLYNK_BLACK); // TODO ?? Black ??
+  }
+}
+
+// V3 - Watering Status
+void pushWateringStatus(){
+  // TODO translate back to string for interface
+  //Pumping=1 Pausing=2 Complete=3
+  Blynk.virtualWrite(V3, wateringStatus);
+}
+
+// Widget button Pump On
+BLYNK_WRITE(V4)
+{
+  int pinValue = param.asInt(); // assigning incoming value from pin V4 to a variable
+  // You can also use:
+  // String i = param.asStr();
+  // double d = param.asDouble();
+  // Serial.print("V4 Pump Button value is: ");
+  // Serial.println(pinValue);
+  if(pinValue == 1){
+    digitalWrite(pumpPin, HIGH);
+    led1.setColor(BLYNK_BLUE);
+  }
+  else{
+    digitalWrite(pumpPin, LOW);
+    led1.setColor(BLYNK_BLACK);
+  }
+}
+
+
+//Device <-- Server <-- Interface
+BLYNK_WRITE(V8)
+// Adapted from Blynk example GetData
+{
+  wateredThreshold = param.asInt(); // assigning incoming value from pin Vx to a variable
+  // You can also use:
+  // String i = param.asStr();
+  // double d = param.asDouble();
+  Serial.print("V8 Step value is: ");
+  Serial.println(wateredThreshold);
 }
 
 void connectionBlink()
@@ -329,50 +512,53 @@ void connectionBlink()
   }
 
 
-//Device <-- Server <-- Interface
-BLYNK_WRITE(V1)
-// Adapted from Blynk example GetData
-{
-  int pinValue = param.asInt(); // assigning incoming value from pin V1 to a variable
-  // You can also use:
-  // String i = param.asStr();
-  // double d = param.asDouble();
-  Serial.print("V1 Slider value is: ");
-  Serial.println(pinValue);
-}
+/*******************************************************
+* Primary runtime control functions ********************
+********************************************************/
 
-// Device --> Server --> Interface
-void V5Push()
-// Adapted from Blynk example VirtualPinWrite
-// This function sends Arduino's up time every second to Virtual Pin (5).
-// In the app, Widget's reading frequency should be set to PUSH. This means
-// that you define how often to send data to Blynk App.
-{
-  Blynk.virtualWrite(V5, millis() / 1000);
-  Serial.println("V5Push");
-  terminal.println(firmwareVersion);
-}
-
-
-
-// Widget push button Pump On
-BLYNK_WRITE(V4)
-{
-  int pinValue = param.asInt(); // assigning incoming value from pin V4 to a variable
-  // You can also use:
-  // String i = param.asStr();
-  // double d = param.asDouble();
-  // Serial.print("V4 Pump Button value is: ");
-  // Serial.println(pinValue);
-  if(pinValue == 1){
-    digitalWrite(pumpPin, HIGH);
-    led1.setColor(BLYNK_BLUE);
+char stateMachine(){ //Called every second by perSecond()
+  //First check status for any errors
+  if(!wifiConnected){
+    boardStatus = 3; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+    boardState = 5; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
   }
-  else{
-    digitalWrite(pumpPin, LOW);
-    led1.setColor(BLYNK_BLACK);
+
+  if(!checkFloat()){ 
+    boardStatus = 1; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+    boardState = 5; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+  }
+
+  /*
+  if(!checkBattery(){
+    boardStatus = 2; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+    boardState = 5; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+  }    
+  */ 
+
+//If no errors then check for status changes that change state
+  if((boardState != 5)){ //Error
+    //Watering?
+    if((wateringStatus = 1)){ //Pumping=1 Pausing=2 Complete=3
+    boardState = 3;//OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    }
+    //Watering Complete?
+    if((wateringStatus = 3)){ //Pumping=1 Pausing=2 Complete=3
+    //Last Watered TimeStamp sent from checkWatered
+    boardState = 1; ////OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    }
   }
 }
+
+
+void perSecond(){// Do every second //!!TODO Only checkWatered if pump is on
+  stateMachine();
+  // TODO put in V5 as a parmeter
+  V5Uptime();
+}
+
+
+
+
 
 
 /*
@@ -385,7 +571,6 @@ void setup()
 //Debug 
 Serial.begin(9600);
 Serial.println(firmwareVersion);
-
 Blynk.begin(auth, ssid, pass);
 
 // Blynk.begin(auth);
@@ -405,7 +590,7 @@ timer.setInterval(1000L, perSecond);
 
 // NOTE Can not make multiple calls at same timer interval with timer
 
-  timer.setInterval(10000L, V5Push); //Every 10 seconds
+ // timer.setInterval(10000L, V5Push); //Every 10 seconds
 
   // WiFi Connected Blinker 
  // timer.setInterval(1000L, connectionBlink);
@@ -455,11 +640,11 @@ void loop()
   // even this does not prevent the pump from running on boot
   //digitalWrite(pumpPin, LOW);
   // check WiFi connection:
+  // if (Blynk.connected())
   if (WiFi.status() != WL_CONNECTED)
   {
-    
 //* * BEGIN OFFLINE CODE *******************************
- 
+wifiConnected = false; 
     Serial.println(" Offline ...");
     // check delay:
     if (millis() - lastConnectionAttempt >= connectionDelay)
@@ -478,9 +663,9 @@ void loop()
     }
   }
   else
-wifiConnected = 1; 
-  
   { 
+    wifiConnected = true; 
+    boardStatus = 4; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
   // Homespun timer not BLYNK timer 
     if (millis() - lastRun5 >= 5000){
       Serial.println(" CONNECTED");
@@ -496,12 +681,15 @@ wifiConnected = 1;
 
 // * BEGIN BLYNK ONLINE CODE ****************************
   
+/* How this works
+In setup a timer calls perSecond()
+perSecond() calls stateMachine()
+stateMachine changes state via helper functions that set status flags
+  also there are certain injections from the BLYNK app interface
+*/
+
     Blynk.run();
-    timer.run(); // BlynkTimer - use the timer.setInterval call in setup
-//digitalWrite(ledPin, LOW);
-   
-    //Serial.print("Status Button");
-    //Serial.println(analogRead(34));
+    timer.run(); 
 
   }
 }
