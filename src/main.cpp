@@ -1,102 +1,7 @@
 //BlynkEspFrame
+//Revised at Phat - 12/11/18
 
-<<<<<<< HEAD
-/* !!TODO NOW *******************
-Get / Set Timestamp from internet
-Clean up serial prints - setup for certain serial prints if offline
-get the online blynker going again 
-
-TODO Later **********************
-Minimal Offline operation 
-??? what is char* vrs char[]
-BLYNK based wateringTimeout step
-Neopix colors for different offline errors 
-
-
-/* Recent comments
-12/9/18 Forgot how much strings suck in C
-changed all status and state to Ints
-*/
-
-
-
-
-
-boardState - State Machine
-//OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
-
-boardStatus State informed by Status
-  Error conditions / Status
-  ----------------
-  //WaterGone=1 BatteryLow=2 Offline=3 Online=4
-
-  wateringStatus
-  ---------------
-  Pumping=1 Pausing=2 Complete=3
-  Pausing=2 - only for slow soaking planters
-  
-
-
-STATE   |  LED  |   Because            Can Change To     Change Condition  Notes
---------------------------------------------------------------------------
-OK      | Green | Watered &          |  Error              Water Gone or              
-        |       | No Error           |                     Battery Low or
---------------------------------------------------------------------------
-Water   | Yellow| Timer start on V2  |
---------------------------------------------------------------------------
-Watering| Blue  | Pump Cycle Started |  Pump Cycle Complete|  Completes or Error
-        |       |                    |  Error              |
---------------------------------------------------------------------------
-Watered | Purple| Pump Cycle Complete|  OK                 | Complete notification timeout or Error                       
-        |       |                    |  Error               
---------------------------------------------------------------------------        
-Error   | Red   | Water Gone or      | OK                  Error resolved
-        |       | Battery Low or     |
-        |       | Offline            |
---------------------------------------------------------------------------
-
-
-Timer / BLYNK Eventor
-  At 11 am on Sat - send notification
-    set V2 to 1 - Pump Cycle start flag - Email Pump Cycle Started
-        
-  For bottom up tray fill / overflow type planters
-    On ESP - when V2 goes to 1 begin pump cycle
-    Pump for a set period of time or until Watered sensor fires
-    Monitor pump cycle via timer monitor V3 - how does that work? Might not need another Vpin
-    I think I want when V2 goes high. For the blynk app ? another timer to check back in on 
-      the status of V2 to confirm things?
-  
-  For slow soak type planters
-
-- ideal operation
-  Timer ? Eventor Time event (manageable on phone)
-    Time event sets Pump Cycle Start flag / Vpin #?
-    ESP starts pump cycle (is always watching for Pump Cycle Start Flag)
-    ESP does pump cycle / however that works for this device / and tracks status
-    ESP sends status back on another Vpin #?
-    ESP Completes pump cylcle and updates status with timestamp - completed
-  Pump Cycle for bottom up - on power AC (always on)
-    Check status / float - watered
-      If OK
-        Turn on watervcc pin
-        Set onboard led mode
-        Set blynk led color
-        Send status
-        Water till watered pin up or timeout
-        Send status
-        Reset
-
-
-On board pull wateredPin low (A0)
-Pump off if offline
-Get offline code working
-Watered sensor power on for watering cycle
-  Pump cycle timing
-ON board use builtInLED for offline notifications
-=======
 /* TODO *******************
-Pump off if offline - update pump features tested below
 Pump off if offline - update pump features tested below
 PUMPCYCLE - Modes? Slow Soak / Bottom Up The mode works with the watered sensor or not
 Works with Timer - Pump cycle strategy - Low Water and over water sensors
@@ -121,7 +26,6 @@ Pump cycle resume when water refilled
 Get offline code working
 Watered sensor power on for watering cycle
 Pump cycle timing
->>>>>>> fa62b1834b56d4cd2e7a4da10c344740b609257f
 Put color key on BLYNK
 VLed color feedback 
   Blue - watering
@@ -278,11 +182,7 @@ const int floatPin = 13; // D7
 const int wateredPin = A0; // Read
 const int wateredVCCPin = 12; // D6 Supply 3.3v to wateredPin Read
 const int ledPin = 0; // D3 Hardware LED
-<<<<<<< HEAD
-const int builtInLed = 2; // D4 Hardware LED on Dev Board
-=======
 //!!!TODO add builtin LED use builtin LED for connections blink
->>>>>>> fa62b1834b56d4cd2e7a4da10c344740b609257f
 
 //Other Globals
 char firmwareVersion[] = "BlynkEspFrame-main.cpp";
@@ -377,8 +277,6 @@ bool checkFloat(){
 
 
 
-
-
 bool checkWatered(){
   watered = analogRead(wateredPin);
 
@@ -458,41 +356,6 @@ BLYNK_WRITE(V0)
   terminal.flush();
 }
 
-<<<<<<< HEAD
-/*
-V1
-WidgetLED led1(V1);- Already instantiated
-Use like 
-led1.setColor(BLYNK_BLUE);
-*/
-
-// Timer Flag to water - V2 - Eventor
-BLYNK_WRITE(V2) // Write value from Blynk app event - called by Blynk Library
-{
-  int vpinValue = param.asInt(); // assigning incoming value from pin V2 to a variable
-  // You can also use:
-  // String i = param.asStr();
-  // double d = param.asDouble();
-  // Serial.print("V4 Pump Button value is: ");
-  // Serial.println(pinValue);
-  if(vpinValue == 1){
-    wateringStatus = 1; //Pumping=1 Pausing=2 Complete=3
-    digitalWrite(pumpPin, HIGH);
-    led1.setColor(BLYNK_BLUE);
-  }
-  else{
-    digitalWrite(pumpPin, LOW);
-    led1.setColor(BLYNK_BLACK); // TODO ?? Black ??
-  }
-}
-
-// V3 - Watering Status
-void pushWateringStatus(){
-  // TODO translate back to string for interface
-  //Pumping=1 Pausing=2 Complete=3
-  Blynk.virtualWrite(V3, wateringStatus);
-}
-
 // Widget button Pump On
 BLYNK_WRITE(V4)
 {
@@ -512,23 +375,7 @@ BLYNK_WRITE(V4)
   }
 }
 
-
-//Device <-- Server <-- Interface
-BLYNK_WRITE(V8)
-// Adapted from Blynk example GetData
-{
-  wateredThreshold = param.asInt(); // assigning incoming value from pin Vx to a variable
-  // You can also use:
-  // String i = param.asStr();
-  // double d = param.asDouble();
-  Serial.print("V8 Step value is: ");
-  Serial.println(wateredThreshold);
-}
-
-void connectionBlink()
-=======
 void connectionBlink() //!!!Pass the ledPin as parameter so can easily change without editing func
->>>>>>> fa62b1834b56d4cd2e7a4da10c344740b609257f
   {
     if(wifiConnected){
       // Toggle led
@@ -594,10 +441,6 @@ void perSecond(){// Do every second //!!TODO Only checkWatered if pump is on
 }
 
 
-
-
-
-
 /*
 SETUP *******************************************************************
 */
@@ -653,9 +496,8 @@ timer.setInterval(1000L, perSecond);
 // ? pins go high during upload
 // For now trying pumpPin on D5 - GPIO 14 
 // Ok on D5 was getting very short pump runs on boot till that changed.
-digitalWrite(pumpPin, LOW);
+
 pinMode(pumpPin, OUTPUT);
-digitalWrite(pumpPin, LOW);
 pinMode(ledPin, OUTPUT);
 pinMode(floatPin, INPUT);
 //pinMode(floatPin, INPUT_PULLUP);
@@ -663,6 +505,7 @@ pinMode(floatPin, INPUT);
 
 pinMode(wateredVCCPin, OUTPUT);
 // TODO !! TODO just switch following high for watered read to save power and lower corrosion
+digitalWrite(pumpPin, LOW);
 digitalWrite(wateredVCCPin, HIGH);
 
 }
