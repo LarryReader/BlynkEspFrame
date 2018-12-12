@@ -1,12 +1,13 @@
 //Configuration and Credentials
-char auth[] = "ad94--7332"; // BLYNK APP - MinimalPlanter
+char auth[] = "ad948bfe5868470a9dffde4c3c747332"; // BLYNK APP - MinimalPlanter
 
 //WiFi
 
 //Phat lab
 char ssid[] = "Fat_Cat_Fablab";
-char pass[] = "m4--0t";
-
+char pass[] = "m4k3rb0t";
+/*TODO If the password is wrong the serial output just stops or actually like 
+    Platformio crashed */ 
 // WiFi credentials.
 // Set password to "" for open networks.
 
