@@ -1,5 +1,9 @@
 //BlynkEspFrame
 //Revised at Phat - 12/11/18.
+//Revised at Phat - 12/12/18.
+
+
+
 
 /* TODO *******************
 Pump off if offline - update pump features tested below
@@ -58,6 +62,9 @@ END of TODO's
  * 10/9/18 Removed lots of comments and unrelated code from V6
  * 10/12/18 V7 working with protoboard tests
  * 12/1/18 Refinements for PlantFrame[?] 1st 4 up prototoype
+ * 12/18/18 Lots of reworking per problems with stings, char
+ * Git definately more trouble than it is worth
+ * 
  */
 
 /*
@@ -186,8 +193,10 @@ const int ledPin = 0; // D3 Hardware LED
 
 //Other Globals
 char firmwareVersion[] = "BlynkEspFrame-main.cpp";
-int boardStatus = 0; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
-int boardState = 0; // OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+//int boardStatus = 0; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+String boardStatus = "null"; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+//int boardState = 0; // OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+String boardState = "null"; //0; // OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
 bool wifiConnected = false;
 bool waterLow = false; //Water reseviour low
 int watered = 0; //Water overflow from watering sensor - analog
@@ -195,7 +204,7 @@ int wateredThreshold = 250; //Water sensor sensitivity
 int wateringStatus = 0; //Pumping=1 Pausing=2 Complete=3
 int wateringTimeout = 2400; // In seconds? !!TODO How does this timer work? A counter in per second?
 //TODO How to retain values through a restart - like lastWatered
-char lastWatered[]= "NaN"; //Last pump cycle complete timestamp
+String lastWatered = "null"; //Last pump cycle complete timestamp
 int ledLastState = 0; //?Helps with state management?
 
 /* **********************************************
@@ -266,7 +275,7 @@ bool checkFloat(){
     if(waterLow){
       led1.setColor(BLYNK_RED);
       digitalWrite(pumpPin, LOW);
-      boardStatus = 1; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+      boardStatus = String("WaterGone"); //WaterGone=1 BatteryLow=2 Offline=3 Online=4
       return  true;
     }
     else{
@@ -279,11 +288,12 @@ bool checkFloat(){
 
 bool checkWatered(){
   watered = analogRead(wateredPin);
-
+//Test
+lastWatered = String("Has not been watered");
   if(watered > wateredThreshold){ 
     // Watered - turn off pump
     digitalWrite(pumpPin, LOW); //Just to make sure pump is off
-    boardState = 3; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    boardState = String("Watering"); //3; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
     led1.setColor(BLYNK_PURPLE); 
     //!!TODO - Is this where we push last watered timestamp - call for the time here?
     return true;
@@ -293,13 +303,13 @@ bool checkWatered(){
     }
   } 
 
-// Device --> Server --> Interface
+// Device --> Server --> Interface 
 void V5Uptime(){ // Push
   Blynk.virtualWrite(V5, millis() / 1000);
 }
 
 // V6 - Watering Status
-void pushTimeStamp(){
+void pushWateredTimeStamp(){
   //TODO get Timestamp
   Blynk.virtualWrite(V6, lastWatered);
 }
@@ -401,15 +411,18 @@ void connectionBlink() //!!!Pass the ledPin as parameter so can easily change wi
 ********************************************************/
 
 char stateMachine(){ //Called every second by perSecond()
+
+//TODO stateMachine wants to return char so return something.
+
   //First check status for any errors
   if(!wifiConnected){
-    boardStatus = 3; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
-    boardState = 5; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    boardStatus = String("Offline"); //3; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+    boardState = String("Error"); //5; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
   }
 
   if(!checkFloat()){ 
-    boardStatus = 1; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
-    boardState = 5; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    boardStatus = String("WaterGone"); //1; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+    boardState = String("Error"); //5; //OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
   }
 
   /*
@@ -420,15 +433,16 @@ char stateMachine(){ //Called every second by perSecond()
   */ 
 
 //If no errors then check for status changes that change state
-  if((boardState != 5)){ //Error
+  if((boardState != "Error")){ //Error
     //Watering?
     if((wateringStatus = 1)){ //Pumping=1 Pausing=2 Complete=3
-    boardState = 3;//OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    boardState = String("Watering"); //3;//OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
     }
     //Watering Complete?
     if((wateringStatus = 3)){ //Pumping=1 Pausing=2 Complete=3
     //Last Watered TimeStamp sent from checkWatered
-    boardState = 1; ////OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    boardState = String("OK"); //1; ////OK=1 > Water=2 > Watering=3 > Watered=4 > OK || Error=5
+    lastWatered = String("12/12/18 at 6:00 PM");
     }
   }
 }
@@ -438,6 +452,7 @@ void perSecond(){// Do every second //!!TODO Only checkWatered if pump is on
   stateMachine();
   // TODO put in V5 as a parmeter
   V5Uptime();
+  pushWateredTimeStamp();
 }
 
 
@@ -545,7 +560,7 @@ wifiConnected = false;
   else
   { 
     wifiConnected = true; 
-    boardStatus = 4; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
+    boardStatus = String("Online"); //4; //WaterGone=1 BatteryLow=2 Offline=3 Online=4
   // Homespun timer not BLYNK timer 
     if (millis() - lastRun5 >= 5000){
       Serial.println(" CONNECTED");
